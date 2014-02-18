@@ -1,67 +1,122 @@
+/*===========================
+ | RAS Competition Code
+ |   DISCLAIMER!!!
+ |      ALL OF THIS WAS WRITTEN WITHOUT TESTING. SOMEONE SHOULD TEST IT BEFORE GETTING TOO ATTACHED
+ |
+ |  EVERYONE WHO CONTRIBUTED PUT NAMES HERE
+ |  Segments of code by:
+ |    Alexander Maricich, 
+ ===========================*/
+
 #include <AFMotor.h>
 
-AF_DCMotor motor(1); // Left Motor
-AF_DCMotor motor2(2); // Right Motor
+AF_DCMotor leftMotor(1); // Left Motor
+AF_DCMotor rightMotor(2); // Right Motor
+int leftHit = 1;
+int rightHit = 2;
 
-uint8_t speedRight = 122; // Speed of Right Motor
-uint8_t speedLeft = 122; // Speed of Left Motor
-
-// the setup routine runs once when you press reset:
 void setup() {
-  // initialize serial communication at 9600 bits per second:
+  // Initialize serial
   Serial.begin(9600);
-   motor.setSpeed(speedLeft);
-   motor2.setSpeed(speedRight);
-   motor.run(RELEASE);
-   motor2.run(RELEASE);
-   Serial.println("Start");
+  // Set up motors initial settings
+  moveMotor(leftMotor, 0, FORWARD);
+  moveMotor(rightMotor, 0, FORWARD);
+  // LATER: ensure that the line is between the two sensors
 }
-//Black is High White is Low
-// the loop routine runs over and over again forever:
+
 void loop() {
-  // read the input on analog pin 0:
-  Serial.println("test");
-  int RightLine = analogRead(A0);
-  int CenterLine = analogRead(A1);
-  int LeftLine = analogRead(A2);
-  
-  if(CenterLine > 300){
-    stayCenter();
-  }
-  else if(RightLine > 300){
-    adjustLeft();
-  }
-  else if(LeftLine > 300){
-    adjustRight();
-  }
-   motor.setSpeed(speedLeft);
-   motor2.setSpeed(speedRight);
-   motor.run(RELEASE);
-   motor2.run(RELEASE);
-   /*
-  // print out the value you read:
-  Serial.print(RightLine);// Right- Purple- AO
-  Serial.print("\t");
-  Serial.print(CenterLine);//Center-Yellow- A1
-  Serial.print("\t");
-  Serial.println(LeftLine); // Left - Green- A2
-  */
- 
-  delay(1);        // delay in between reads for stability
+  lineFollow();
+  // angularChallenge();
+  // boulderField();
 }
 
-void adjustLeft(){
-  Serial.println("Adjusting Left");
-  speedRight += 20; 
+
+//  Line Follow Code
+// =================================
+
+void lineFollow() {
+  // Read in the line information
+  int* lineData = retrieveLineSensorData();
+  // Move the motors in the proper direction
+  steer(lineData);
 }
 
-void adjustRight(){
-  Serial.println("Adjusting Right");
-  speedLeft += 20; 
+int* retrieveLineSensorData() {
+  int data[3] = {};
+  data[0] = analogRead(A0);
+  data[1] = analogRead(A1);
+  data[2] = analogRead(A2);
+  return data;
 }
 
-void stayCenter(){
-  Serial.println("Staying on Course");
-  speedRight = 122;
-  speedLeft = 122;
+void steer(int* dataArray) {
+  // Find what direction the robot needs to turn
+  int instructions = findContact(dataArray);
+  // Set motors to proper value
+  if(instructions == leftHit) {
+    // Adjust to the right
+    moveMotor(leftMotor, 255, FORWARD);
+    moveMotor(rightMotor, 255, BACKWARD);
+  }
+  else if(instructions == rightHit) {
+    // Adjust to the left
+    moveMotor(leftMotor, 255, BACKWARD);
+    moveMotor(rightMotor, 255, FORWARD);
+  }
+  else {
+    // Full speed ahead! 
+    moveMotor(leftMotor, 255, FORWARD);
+    moveMotor(rightMotor, 255, FORWARD);
+  }
 }
+
+void moveMotor(AF_DCMotor motor, int sp, int direct) {
+  // Pass a motor, speed, and direction to move each motor
+  motor.setSpeed(sp);
+  motor.run(RELEASE);
+  motor.run(direct);
+}
+
+int findContact(int* motorValues) {
+  // Return what sensor was hit
+  if(motorValues[0] > 300){
+    // left sensor is hit, adjust right
+    return leftHit;
+  }
+  else if(motorValues[2] > 300){
+    // right sensor is hit, adjust left
+    return rightHit;
+  }
+  else
+    return 0;
+}
+
+
+
+
+////
+// END Line Follow Code
+////
+
+//  Angular Challenge Code
+// =================================
+
+void angularChallenge() {
+  // $$$ TODO
+}
+
+////
+// END Angular Challenge Code
+////
+
+//  Angular Challenge Code
+// =================================
+
+void boulderField() {
+  // $$$ TODO
+}
+
+
+////
+// END Angular Challenge Code
+////
