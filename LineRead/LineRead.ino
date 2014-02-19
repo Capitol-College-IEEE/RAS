@@ -10,8 +10,8 @@
 
 #include <AFMotor.h>
 
-AF_DCMotor leftMotor(1); // Left Motor
-AF_DCMotor rightMotor(2); // Right Motor
+AF_DCMotor leftMotor(3); // Left Motor
+AF_DCMotor rightMotor(4); // Right Motor
 int leftHit = 1;
 int rightHit = 2;
 
@@ -19,13 +19,13 @@ void setup() {
   // Initialize serial
   Serial.begin(9600);
   // Set up motors initial settings
-  moveMotor(leftMotor, 0, FORWARD);
-  moveMotor(rightMotor, 0, FORWARD);
+  //moveMotor(leftMotor, FORWARD);
+  //moveMotor(rightMotor, FORWARD);
   // LATER: ensure that the line is between the two sensors
 }
 
 void loop() {
-  lineFollow();
+  //lineFollow();
   // angularChallenge();
   // boulderField();
 }
@@ -35,18 +35,17 @@ void loop() {
 // =================================
 
 void lineFollow() {
+  int data[2] = {0, 0};
+
   // Read in the line information
-  int* lineData = retrieveLineSensorData();
+  retrieveLineSensorData(data);
   // Move the motors in the proper direction
-  steer(lineData);
+  steer(data);
 }
 
-int* retrieveLineSensorData() {
-  int data[3] = {};
+void retrieveLineSensorData(int* data) {
   data[0] = analogRead(A0);
   data[1] = analogRead(A1);
-  data[2] = analogRead(A2);
-  return data;
 }
 
 void steer(int* dataArray) {
@@ -55,36 +54,31 @@ void steer(int* dataArray) {
   // Set motors to proper value
   if(instructions == leftHit) {
     // Adjust to the right
-    moveMotor(leftMotor, 255, FORWARD);
-    moveMotor(rightMotor, 255, BACKWARD);
+    leftMotor.run(FORWARD);
+    rightMotor.run(BACKWARD);
   }
   else if(instructions == rightHit) {
     // Adjust to the left
-    moveMotor(leftMotor, 255, BACKWARD);
-    moveMotor(rightMotor, 255, FORWARD);
+    leftMotor.run(BACKWARD);
+    rightMotor.run(FORWARD);
   }
   else {
     // Full speed ahead! 
-    moveMotor(leftMotor, 255, FORWARD);
-    moveMotor(rightMotor, 255, FORWARD);
+    leftMotor.run(FORWARD);
+    rightMotor.run(FORWARD);
   }
-}
-
-void moveMotor(AF_DCMotor motor, int sp, int direct) {
-  // Pass a motor, speed, and direction to move each motor
-  motor.setSpeed(sp);
-  motor.run(RELEASE);
-  motor.run(direct);
 }
 
 int findContact(int* motorValues) {
   // Return what sensor was hit
   if(motorValues[0] > 300){
     // left sensor is hit, adjust right
+    // Serial.println("turn left");
     return leftHit;
   }
-  else if(motorValues[2] > 300){
+  else if(motorValues[1] > 300){
     // right sensor is hit, adjust left
+    // Serial.println("turn right");
     return rightHit;
   }
   else
