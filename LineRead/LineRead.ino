@@ -5,7 +5,11 @@
  |
  |  EVERYONE WHO CONTRIBUTED PUT NAMES HERE
  |  Segments of code by:
- |    Alexander Maricich, 
+ |    Alexander Maricich
+ |    Daniel Steele
+ |    Ethan Reesor
+ |    Daniel Whiteside
+ |    Kierra Harrison
  ===========================*/
 
 #include <AFMotor.h>
