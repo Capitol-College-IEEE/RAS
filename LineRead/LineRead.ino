@@ -1,3 +1,4 @@
+
 /*===========================
  | RAS Competition Code
  |   DISCLAIMER!!!
@@ -12,24 +13,24 @@
  |    Kierra Harrison
  ===========================*/
 
-#include <AFMotor.h>
+#include <Servo.h>
 
-AF_DCMotor leftMotor(3); // Left Motor
-AF_DCMotor rightMotor(4); // Right Motor
+Servo mL, mR;
 int leftHit = 1;
 int rightHit = 2;
 
 void setup() {
   // Initialize serial
   Serial.begin(9600);
-  // Set up motors initial settings
-  //moveMotor(leftMotor, FORWARD);
-  //moveMotor(rightMotor, FORWARD);
+  
+  // Attach Servos
+  mL.attach(10);
+  mR.attach(9);
   // LATER: ensure that the line is between the two sensors
 }
 
 void loop() {
-  //lineFollow();
+  lineFollow();
   // angularChallenge();
   // boulderField();
 }
@@ -58,29 +59,29 @@ void steer(int* dataArray) {
   // Set motors to proper value
   if(instructions == leftHit) {
     // Adjust to the right
-    leftMotor.run(FORWARD);
-    rightMotor.run(BACKWARD);
+    mL.writeMicroseconds(2000);
+    mR.writeMicroseconds(1500);
   }
   else if(instructions == rightHit) {
     // Adjust to the left
-    leftMotor.run(BACKWARD);
-    rightMotor.run(FORWARD);
+    mL.writeMicroseconds(1500);
+    mR.writeMicroseconds(2000);
   }
   else {
     // Full speed ahead! 
-    leftMotor.run(FORWARD);
-    rightMotor.run(FORWARD);
+    mL.writeMicroseconds(2000);
+    mR.writeMicroseconds(2000);
   }
 }
 
-int findContact(int* motorValues) {
+int findContact(int* sensorValues) {
   // Return what sensor was hit
-  if(motorValues[0] > 300){
+  if(sensorValues[0] > 300){
     // left sensor is hit, adjust right
     // Serial.println("turn left");
     return leftHit;
   }
-  else if(motorValues[1] > 300){
+  else if(sensorValues[1] > 300){
     // right sensor is hit, adjust left
     // Serial.println("turn right");
     return rightHit;
