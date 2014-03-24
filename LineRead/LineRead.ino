@@ -56,9 +56,9 @@ void setup() {
 }
 
 void loop() {
-  // lineFollow();
-  angularChallenge();
-  // boulderField();
+  lineFollow();
+  //angularChallenge();
+  //boulderField();
 }
 
 
@@ -100,24 +100,24 @@ void steerLineFollow(char hits) {
   {
     Serial.print("LEFT ");
     Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-    analogWrite(LEFT_MOTOR,  MPULSE(+0.4));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
+    analogWrite(LEFT_MOTOR,  MPULSE(+0.2));
   }
   else if (hits & LEFT_HIT)
   // left side triggering
   {
     Serial.print("RIGHT ");
     Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(-0.4));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
+    analogWrite(RIGHT_MOTOR, MPULSE(-0.2));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
   }
   else
   // neither side triggering
   {
     Serial.print("GO ");
     Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
   }
 }
 
