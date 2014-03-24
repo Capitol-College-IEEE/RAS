@@ -40,8 +40,8 @@ void setup() {
 }
 
 void loop() {
-  lineFollow();
-  // angularChallenge();
+  // lineFollow();
+  angularChallenge();
   // boulderField();
 }
 
