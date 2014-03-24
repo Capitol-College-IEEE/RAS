@@ -116,8 +116,8 @@ void steerLineFollow(char hits) {
   {
     Serial.print("GO ");
     Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.8));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.8));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
   }
 }
 
