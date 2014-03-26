@@ -1,11 +1,8 @@
 
 /*===========================
  | RAS Competition Code
- |   DISCLAIMER!!!
- |      ALL OF THIS WAS WRITTEN WITHOUT TESTING. SOMEONE SHOULD TEST IT BEFORE GETTING TOO ATTACHED
  |
- |  EVERYONE WHO CONTRIBUTED PUT NAMES HERE
- |  Segments of code by:
+ |  Contributors:
  |    Alexander Maricich
  |    Daniel Steele
  |    Ethan Reesor
@@ -13,7 +10,6 @@
  |    Kierra Harrison
  ===========================*/
 
-//#include <Servo.h>
 #include <Wire.h> // Used for I2C
 
 #define RIGHT_MOTOR 9
@@ -47,15 +43,36 @@ void setup() {
   pinMode(RIGHT_MOTOR, OUTPUT);
   pinMode(LEFT_MOTOR, OUTPUT);
   
+  pinMode(13, OUTPUT);
+  
   // TODO ensure that the line is between the two sensors
   Serial.println("MMA8452 Basic Example");
 
-  Wire.begin(); //Join the bus as a master
+  //Wire.begin(); //Join the bus as a master
 
-  initMMA8452(); //Test and intialize the MMA8452
+  //initMMA8452(); //Test and intialize the MMA8452
 }
 
 void loop() {
+  static unsigned char led_pattern[] = {
+    1,1,1,              0,0,0,
+    1,                  0,0,0,
+    1,0,1,0,1,          0,0,0,
+    1,0,1,1,1,0,1,0,1,  0,0,0,
+    1,0,1,1,1,          0,0,0,
+    0,                  0,0,0
+  };
+  static unsigned int led_index = 0;
+  static unsigned long time = 0;
+  
+  unsigned long next_time = millis();
+  if (next_time - time > 100) {
+    digitalWrite(13, led_pattern[led_index++]);
+    if (led_index >= sizeof(led_pattern))
+      led_index = 0;
+    time = next_time;
+  }
+  
   lineFollow();
   //angularChallenge();
   //boulderField();
@@ -84,40 +101,29 @@ char lineSensorHits() {
 }
 
 void steerLineFollow(char hits) {
-  Serial.print("Hits: ");
-  Serial.println((int)hits);
-  
   if ((hits & RIGHT_HIT) && (hits & LEFT_HIT))
   // both sides triggering
   {
-    Serial.print("STOP ");
-    Serial.println((int)hits);
     analogWrite(RIGHT_MOTOR, MPULSE( 0.0));
     analogWrite(LEFT_MOTOR,  MPULSE( 0.0));
   }
   else if (hits & RIGHT_HIT)
   // right side triggering
   {
-    Serial.print("LEFT ");
-    Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
-    analogWrite(LEFT_MOTOR,  MPULSE(+0.2));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+    analogWrite(LEFT_MOTOR,  MPULSE(+0.4));
   }
   else if (hits & LEFT_HIT)
   // left side triggering
   {
-    Serial.print("RIGHT ");
-    Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(-0.2));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
+    analogWrite(RIGHT_MOTOR, MPULSE(-0.4));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
   }
   else
   // neither side triggering
   {
-    Serial.print("GO ");
-    Serial.println((int)hits);
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
   }
 }
 
