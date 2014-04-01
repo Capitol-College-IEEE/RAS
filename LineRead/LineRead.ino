@@ -27,7 +27,12 @@
 #define LEFT_HIT (1 << 1)
 
 // Accelerometer
+MPU6050 mpu;
 #define INT_in 2
+#define X_OFFSET 220
+#define Y_OFFSET 76
+#define Z_OFFSET -85
+#define Z_ACCEL_OFFSET 1788
 
 // Motors
 #define PWM_FREQ 488.
@@ -62,13 +67,10 @@ void setup() {
   
   
   pinMode(13, OUTPUT);
-  
-  // TODO ensure that the line is between the two sensors
-  Serial.println("MMA8452 Basic Example");
 
-  //Wire.begin(); //Join the bus as a master
+  // 
+  accelerometerSetup();
 
-  //initMMA8452(); //Test and intialize the MMA8452
 }
 
 void loop() {
@@ -220,8 +222,36 @@ void updateComms() {
 //  Angular Challenge Code
 // =================================
 
-void angularChallengeSetup() {
+void accelerometerSetup() {
+  ////
+  // Accelerometer Setup
+  ////
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+      Wire.begin();
+      TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+      Fastwire::setup(400, true);
+  #endif
+  // Initialize serial communication
+  Serial.begin(115200);
+  while (!Serial);
+  mpu.initialize();
+  if (mpu.testConnection()) {
+    Serial.println("Connection Successful");
+  }
+  else {
+    Serial.println("Connection ERROR");
+  }
+  // Supply gyro offsets
+  mpu.setXGyroOffset(X_OFFSET);
+  mpu.setYGyroOffset(Y_OFFSET);
+  mpu.setZGyroOffset(Z_OFFSET);
+  mpu.setZAccelOffset(Z_ACCEL_OFFSET);
+  // Enable DMP
+  mpu.setDMPEnabled(true);
 
+
+// END Accelerometer Setup
 }
 
 void angularChallenge() {
