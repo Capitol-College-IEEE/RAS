@@ -11,6 +11,7 @@
  ===========================*/
 
 #include <Wire.h> // Used for I2C
+#include <XBee.h>
 
 #define RIGHT_MOTOR 9
 #define LEFT_MOTOR 10
@@ -22,7 +23,7 @@
 #define PWM_FREQ 488.
 #define PWM_PERIOD_MS (1000./PWM_FREQ)
 #define PWM_MAX 255
-#define PULSE(milliseconds) ((milliseconds) / PWM_PERIOD_MS * PWM_MAX)
+#define PULSE(milliseconds) (PWM_MAX * (milliseconds) / PWM_PERIOD_MS)
 #define MPULSE(power) PULSE(1.5 + power / 2.)
 
 
@@ -36,12 +37,19 @@
 #define GSCALE 2 // Sets full-scale range to +/-2, 4, or 8g. Used to calc real g values.
 
 void setup() {
-  // Initialize serial
-  Serial.begin(9600);
-  
+
   // Attach Servos
   pinMode(RIGHT_MOTOR, OUTPUT);
   pinMode(LEFT_MOTOR, OUTPUT);
+  
+  
+  initComms();
+  //Setup for jumper for control
+  pinMode(12, OUTPUT);
+  pinMode(11, INPUT);
+  
+  digitalWrite(12, HIGH);
+  
   
   pinMode(13, OUTPUT);
   
@@ -73,9 +81,14 @@ void loop() {
     time = next_time;
   }
   
-  lineFollow();
-  //angularChallenge();
-  //boulderField();
+  if(digitalRead(11) == HIGH){
+    remoteControl();
+  }  
+  else{
+    lineFollow();
+    //angularChallenge();
+    //boulderField();
+  }
 }
 
 
@@ -96,7 +109,7 @@ char lineSensorHits() {
   
   if (analogRead(LEFT_SENSOR) > 300)
     hits |= LEFT_HIT;
-  
+  Serial.println((unsigned char) hits);
   return hits;
 }
 
@@ -130,6 +143,69 @@ void steerLineFollow(char hits) {
 ////
 // END Line Follow Code
 ////
+
+
+// Commumications & Control
+// ====================================
+
+XBee xbee = XBee();
+Rx16IoSampleResponse io16 = Rx16IoSampleResponse();
+Rx64IoSampleResponse io64 = Rx64IoSampleResponse();
+
+
+void remoteControl(){
+  updateComms();
+  
+}  
+
+void remoteDrive(int yL, int xL, int yR, int xR){
+  //0 to 1024
+  yL = 512 - yL;
+  yR = 512 - yR;
+  yL = MPULSE(((float)yL) / 512.);
+  yR = MPULSE(((float)yR) / 512.);
+  analogWrite(RIGHT_MOTOR, yR);
+  analogWrite(LEFT_MOTOR,  yL);
+}
+
+void initComms() {
+  Serial.begin(9600);
+  
+  xbee.setSerial(Serial);
+}
+
+void updateComms() {
+  XBeeResponse response;
+  
+  xbee.readPacket();
+  response = xbee.getResponse();
+  
+  if (!response.isAvailable())
+    return;
+  
+  if (response.getApiId() == RX_16_IO_RESPONSE) {
+    response.getRx16IoSampleResponse(io16);
+    remoteDrive(io16.getAnalog(0,0),
+                    io16.getAnalog(1,0),
+                    io16.getAnalog(2,0),
+                    io16.getAnalog(3,0));
+  } else if (response.getApiId() == RX_64_IO_RESPONSE) {
+    response.getRx64IoSampleResponse(io64);
+    remoteDrive(io64.getAnalog(0,0),
+                    io64.getAnalog(1,0),
+                    io64.getAnalog(2,0),
+                    io64.getAnalog(3,0));
+  } else {
+    //Serial.print("API Packet: ");
+   // Serial.println(response.getApiId(), HEX);
+  }
+}
+
+////
+// END Coms
+////
+
+
 
 //  Angular Challenge Code
 // =================================
