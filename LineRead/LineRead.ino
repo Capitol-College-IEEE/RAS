@@ -44,10 +44,10 @@
 #define GSCALE 2 // Sets full-scale range to +/-2, 4, or 8g. Used to calc real g values.
 
 #define INT_in 2
-#define X_OFFSET 0
-#define Y_OFFSET 0
-#define Z_OFFSET 0
-#define Z_ACCEL_OFFSET 0
+#define X_OFFSET 10
+#define Y_OFFSET 10
+#define Z_OFFSET 10
+#define Z_ACCEL_OFFSET 10
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
 
 #define CTRL_MODE_LINE_FOLLOW       0
@@ -90,7 +90,7 @@ void setup() {
   
   screen.initialize();
   screen.sendString(0,0,"CAPITOL IEEE");
-  while(true);
+  //zwhile(true);
   initComms();
   //Setup for jumper for control
   pinMode(12, INPUT_PULLUP);
@@ -175,6 +175,8 @@ void mainLoop() {
   switch (control_mode) {
     case CTRL_MODE_LINE_FOLLOW:
       Serial.println("Line Follow");
+      screen.clearScreen();
+      screen.sendString(0,0,"Line Follow");
       lineFollow();
       break;
     
@@ -185,11 +187,15 @@ void mainLoop() {
     
     case CTRL_MODE_BOULDER_FIELD:
       Serial.println("Boulder");
+      screen.clearScreen();
+      screen.sendString(0,0,"Boulder");
       boulderField();
       break;
       
     default:
       Serial.println("Remote");
+      screen.clearScreen();
+      screen.sendString(0,0,"Remote");
       remoteControl();
       break;
   }
@@ -266,8 +272,8 @@ void remoteDrive(int yL, int xL, int yR, int xR){
   //0 to 1024
   yL = 512 - yL;
   yR = 512 - yR;
-  yL = MPULSE(((float)yL) / 1024.);
-  yR = MPULSE(((float)yR) / 1024.);
+  yL = MPULSE(((float)yL) / 512. / 3. * 2.);
+  yR = MPULSE(((float)yR) / 512. / 3. * 2.);
   analogWrite(RIGHT_MOTOR, yR);
   analogWrite(LEFT_MOTOR,  yL);
 }
@@ -372,23 +378,39 @@ void accelerometerSetup() {
 }
 
 void angularChallenge() {
+  analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+  analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
   if(reseting)
     return;
-  //Serial.print("ypr\t");
-  //Serial.print(ypr[0] * 180/M_PI);
-  //Serial.print("\t");
-  //Serial.print(ypr[1] * 180/M_PI);
-  //Serial.print("\t");
-  //Serial.println(ypr[2] * 180/M_PI);
-  float angle = ypr[2] * 180/M_PI;
-  char data[7];
-  sprintf(data, "%d.%d", (int) angle, abs((int) ((angle - (int) angle) * 100)));
-  Serial.println(data);
-  //static int count = 0;
-  //Serial.println(data);
-  //Serial.println(count++);
-  screen.clearScreen();
-  screen.sendString(0,0, data );
+  static int state = 0;
+  static double maximum = -1000;
+  static double minimum = 1000;
+  
+  if(state == 4){
+    double avg = (maximum + abs(minimum))/2;
+    char data[7];
+    sprintf(data, "AVG : %d.%d", (int) avg, abs((int) ((avg - (int) avg) * 100)));
+    Serial.println(data);
+    screen.clearScreen();
+    screen.sendString(0,0, data );
+  }
+  else{
+    float angle = -(ypr[2] * 180/M_PI);
+    if((state == 0 && angle > 10) || (state == 1 && abs(angle) < 10) || (state == 2 && -angle > 10) || (state == 3 && abs(angle) < 10)){
+      state++;
+    }
+    if(angle > maximum){
+      maximum = angle;
+    }
+    else if(angle < minimum){
+      minimum = angle;
+    }
+    char data[7];
+    sprintf(data, "%d.%d", (int) angle, abs((int) ((angle - (int) angle) * 100)));
+    Serial.println(data);
+    screen.clearScreen();
+    screen.sendString(0,0, data );
+  }
 }
 
 
@@ -400,7 +422,8 @@ void angularChallenge() {
 // =================================
 
 void boulderField() {
-  // $$$ TODO
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
 }
 
 
