@@ -1,4 +1,3 @@
-
 /*===========================
  | RAS Competition Code
  |
@@ -10,6 +9,7 @@
  |    Kierra Harrison
  ===========================*/
 
+#include <LCD.h>
 #include <Wire.h> // Used for I2C
 #include <XBee.h>
 #include "I2Cdev.h"
@@ -44,10 +44,10 @@
 #define GSCALE 2 // Sets full-scale range to +/-2, 4, or 8g. Used to calc real g values.
 
 #define INT_in 2
-#define X_OFFSET 220
-#define Y_OFFSET 76
-#define Z_OFFSET -85
-#define Z_ACCEL_OFFSET 1788
+#define X_OFFSET 0
+#define Y_OFFSET 0
+#define Z_OFFSET 0
+#define Z_ACCEL_OFFSET 0
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
 
 #define CTRL_MODE_LINE_FOLLOW       0
@@ -74,6 +74,9 @@ VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measur
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+LCD screen(7,6,5,4,3);
+
+bool reseting = false;
 
 void dmpDataReady() {
     mpuInterrupt = true;
@@ -85,7 +88,9 @@ void setup() {
   pinMode(RIGHT_MOTOR, OUTPUT);
   pinMode(LEFT_MOTOR, OUTPUT);
   
-  
+  screen.initialize();
+  screen.sendString(0,0,"CAPITOL IEEE");
+  while(true);
   initComms();
   //Setup for jumper for control
   pinMode(12, INPUT_PULLUP);
@@ -119,6 +124,8 @@ void loop() {
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
       // reset so we can continue cleanly
+      
+      reseting = true;
       mpu.resetFIFO();
       Serial.println(F("FIFO overflow!"));
 
@@ -126,7 +133,7 @@ void loop() {
   } else if (mpuIntStatus & 0x02) {
       // wait for correct available data length, should be a VERY short wait
       while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-
+      reseting = false;
       // read a packet from FIFO
       mpu.getFIFOBytes(fifoBuffer, packetSize);
       
@@ -155,6 +162,8 @@ void mainLoop() {
   
   Serial.println("Loop");
   
+  //screen.sendString(0,0, "IEEE");
+  
   unsigned long next_time = millis();
   if (next_time - time > 100) {
     digitalWrite(13, led_pattern[led_index++]);
@@ -165,18 +174,22 @@ void mainLoop() {
   
   switch (control_mode) {
     case CTRL_MODE_LINE_FOLLOW:
+      Serial.println("Line Follow");
       lineFollow();
       break;
     
     case CTRL_MODE_ANGULAR_CHALLENGE:
+      Serial.println("Anglular");
       angularChallenge();
       break;
     
     case CTRL_MODE_BOULDER_FIELD:
+      Serial.println("Boulder");
       boulderField();
       break;
       
     default:
+      Serial.println("Remote");
       remoteControl();
       break;
   }
@@ -253,14 +266,14 @@ void remoteDrive(int yL, int xL, int yR, int xR){
   //0 to 1024
   yL = 512 - yL;
   yR = 512 - yR;
-  yL = MPULSE(((float)yL) / 512.);
-  yR = MPULSE(((float)yR) / 512.);
+  yL = MPULSE(((float)yL) / 1024.);
+  yR = MPULSE(((float)yR) / 1024.);
   analogWrite(RIGHT_MOTOR, yR);
   analogWrite(LEFT_MOTOR,  yL);
 }
 
 void initComms() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   
   xbee.setSerial(Serial);
 }
@@ -359,12 +372,23 @@ void accelerometerSetup() {
 }
 
 void angularChallenge() {
-  Serial.print("ypr\t");
-  Serial.print(ypr[0] * 180/M_PI);
-  Serial.print("\t");
-  Serial.print(ypr[1] * 180/M_PI);
-  Serial.print("\t");
-  Serial.println(ypr[2] * 180/M_PI);
+  if(reseting)
+    return;
+  //Serial.print("ypr\t");
+  //Serial.print(ypr[0] * 180/M_PI);
+  //Serial.print("\t");
+  //Serial.print(ypr[1] * 180/M_PI);
+  //Serial.print("\t");
+  //Serial.println(ypr[2] * 180/M_PI);
+  float angle = ypr[2] * 180/M_PI;
+  char data[7];
+  sprintf(data, "%d.%d", (int) angle, abs((int) ((angle - (int) angle) * 100)));
+  Serial.println(data);
+  //static int count = 0;
+  //Serial.println(data);
+  //Serial.println(count++);
+  screen.clearScreen();
+  screen.sendString(0,0, data );
 }
 
 
