@@ -44,10 +44,10 @@
 #define GSCALE 2 // Sets full-scale range to +/-2, 4, or 8g. Used to calc real g values.
 
 #define INT_in 2
-#define X_OFFSET 10
-#define Y_OFFSET 10
-#define Z_OFFSET 10
-#define Z_ACCEL_OFFSET 10
+#define X_OFFSET -350
+//#define Y_OFFSET 10
+//#define Z_OFFSET 10
+//#define Z_ACCEL_OFFSET 10
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
 
 #define CTRL_MODE_LINE_FOLLOW       0
@@ -343,9 +343,9 @@ void accelerometerSetup() {
   devStatus = mpu.dmpInitialize();
   // Supply gyro offsets
   mpu.setXGyroOffset(X_OFFSET);
-  mpu.setYGyroOffset(Y_OFFSET);
-  mpu.setZGyroOffset(Z_OFFSET);
-  mpu.setZAccelOffset(Z_ACCEL_OFFSET);
+  //mpu.setYGyroOffset(Y_OFFSET);
+  //mpu.setZGyroOffset(Z_OFFSET);
+  //mpu.setZAccelOffset(Z_ACCEL_OFFSET);
   // Enable DMP
   if (devStatus == 0) {
         // turn on the DMP, now that it's ready
@@ -406,7 +406,7 @@ void angularChallenge() {
       minimum = angle;
     }
     char data[7];
-    sprintf(data, "%d.%d", (int) angle, abs((int) ((angle - (int) angle) * 100)));
+    sprintf(data, "%d.%d\x7f", (int) angle, abs((int) ((angle - (int) angle) * 100)));
     Serial.println(data);
     screen.clearScreen();
     screen.sendString(0,0, data );
