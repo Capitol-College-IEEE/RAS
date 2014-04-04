@@ -93,8 +93,9 @@ void setup() {
   //zwhile(true);
   initComms();
   //Setup for jumper for control
-  pinMode(12, INPUT_PULLUP);
   pinMode(11, INPUT_PULLUP);
+  pinMode(12, INPUT_PULLUP);
+  pinMode(8, INPUT_PULLUP);
   
   
   pinMode(13, OUTPUT);
@@ -208,6 +209,11 @@ void mainLoop() {
 void lineFollow() {
   // Read in the line information
   // Move the motors in the proper direction
+  if(digitalRead(8) == HIGH){
+    analogWrite(RIGHT_MOTOR, MPULSE(0.0));
+    analogWrite(LEFT_MOTOR,  MPULSE(0.0));
+    return;
+  }
   steerLineFollow(lineSensorHits());
 }
 
@@ -269,6 +275,11 @@ void remoteControl(){
 }  
 
 void remoteDrive(int yL, int xL, int yR, int xR){
+  if(digitalRead(8) == HIGH){
+    analogWrite(RIGHT_MOTOR, MPULSE(0.0));
+    analogWrite(LEFT_MOTOR,  MPULSE(0.0));
+    return;
+  }
   //0 to 1024
   yL = 512 - yL;
   yR = 512 - yR;
@@ -378,39 +389,45 @@ void accelerometerSetup() {
 }
 
 void angularChallenge() {
-  analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-  analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
-  if(reseting)
-    return;
-  static int state = 0;
-  static double maximum = -1000;
-  static double minimum = 1000;
-  
-  if(state == 4){
-    double avg = (maximum + abs(minimum))/2;
-    char data[7];
-    sprintf(data, "AVG : %d.%d", (int) avg, abs((int) ((avg - (int) avg) * 100)));
-    Serial.println(data);
-    screen.clearScreen();
-    screen.sendString(0,0, data );
-  }
-  else{
-    float angle = -(ypr[2] * 180/M_PI);
-    if((state == 0 && angle > 10) || (state == 1 && abs(angle) < 10) || (state == 2 && -angle > 10) || (state == 3 && abs(angle) < 10)){
-      state++;
+    if(reseting)
+      return;
+    static int state = 0;
+    static double maximum = -1000;
+    static double minimum = 1000;
+    if(digitalRead(8) == HIGH){
+       analogWrite(RIGHT_MOTOR, MPULSE(0.0));
+       analogWrite(LEFT_MOTOR,  MPULSE(0.0));
     }
-    if(angle > maximum){
-      maximum = angle;
+    else{
+       analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+       analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
     }
-    else if(angle < minimum){
-      minimum = angle;
+    if(state == 4){
+      double avg = (maximum + abs(minimum))/2;
+      char data[7];
+      sprintf(data, "AVG : %d.%d", (int) avg, abs((int) ((avg - (int) avg) * 100)));
+      Serial.println(data);
+      screen.clearScreen();
+      screen.sendString(0,0, data );
     }
-    char data[7];
-    sprintf(data, "%d.%d\x7f", (int) angle, abs((int) ((angle - (int) angle) * 100)));
-    Serial.println(data);
-    screen.clearScreen();
-    screen.sendString(0,0, data );
-  }
+    else{
+      float angle = -(ypr[2] * 180/M_PI);
+      if((state == 0 && angle > 10) || (state == 1 && abs(angle) < 10) || (state == 2 && -angle > 10) || (state == 3 && abs(angle) < 10)){
+        state++;
+      }
+      if(angle > maximum){
+        maximum = angle;
+      }
+      else if(angle < minimum){
+        minimum = angle;
+      }
+      char data[7];
+      sprintf(data, "%d.%d\x7f", (int) angle, abs((int) ((angle - (int) angle) * 100)));
+      Serial.println(data);
+      screen.clearScreen();
+      screen.sendString(0,0, data );
+    }
+  //}
 }
 
 
@@ -422,8 +439,13 @@ void angularChallenge() {
 // =================================
 
 void boulderField() {
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
+  if(digitalRead(8) == HIGH){
+    analogWrite(RIGHT_MOTOR, MPULSE(0.0));
+    analogWrite(LEFT_MOTOR,  MPULSE(0.0));
+    return;
+  }
+  analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
+  analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
 }
 
 
