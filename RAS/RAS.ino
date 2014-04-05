@@ -44,7 +44,7 @@
 #define GSCALE 2 // Sets full-scale range to +/-2, 4, or 8g. Used to calc real g values.
 
 #define INT_in 2
-#define X_OFFSET -350
+#define X_OFFSET -1720
 //#define Y_OFFSET 10
 //#define Z_OFFSET 10
 //#define Z_ACCEL_OFFSET 10
@@ -239,20 +239,20 @@ void steerLineFollow(char hits) {
   else if (hits & RIGHT_HIT)
   // right side triggering
   {
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-    analogWrite(LEFT_MOTOR,  MPULSE(+0.4));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
+    analogWrite(LEFT_MOTOR,  MPULSE(+0.2));
   }
   else if (hits & LEFT_HIT)
   // left side triggering
   {
-    analogWrite(RIGHT_MOTOR, MPULSE(-0.4));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
+    analogWrite(RIGHT_MOTOR, MPULSE(-0.2));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
   }
   else
   // neither side triggering
   {
-    analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-    analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
+    analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
+    analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
   }
 }
 
@@ -351,83 +351,99 @@ void accelerometerSetup() {
     Serial.println("Connection ERROR");
   }
   
-  devStatus = mpu.dmpInitialize();
-  // Supply gyro offsets
-  mpu.setXGyroOffset(X_OFFSET);
-  //mpu.setYGyroOffset(Y_OFFSET);
-  //mpu.setZGyroOffset(Z_OFFSET);
-  //mpu.setZAccelOffset(Z_ACCEL_OFFSET);
-  // Enable DMP
-  if (devStatus == 0) {
-        // turn on the DMP, now that it's ready
-        Serial.println(F("Enabling DMP..."));
-        mpu.setDMPEnabled(true);
-
-        // enable Arduino interrupt detection
-        Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
-        attachInterrupt(0, dmpDataReady, RISING);
-        mpuIntStatus = mpu.getIntStatus();
-
-        // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        Serial.println(F("DMP ready! Waiting for first interrupt..."));
-        dmpReady = true;
-
-        // get expected DMP packet size for later comparison
-        packetSize = mpu.dmpGetFIFOPacketSize();
-    } else {
-        // ERROR!
-        // 1 = initial memory load failed
-        // 2 = DMP configuration updates failed
-        // (if it's going to break, usually the code will be 1)
-        Serial.print(F("DMP Initialization failed (code "));
-        Serial.print(devStatus);
-        Serial.println(F(")"));
-    }
-
-
-// END Accelerometer Setup
+  // END Accelerometer Setup
 }
 
 void angularChallenge() {
-    if(reseting)
-      return;
-    static int state = 0;
-    static double maximum = -1000;
-    static double minimum = 1000;
-    if(digitalRead(8) == HIGH){
-       analogWrite(RIGHT_MOTOR, MPULSE(0.0));
-       analogWrite(LEFT_MOTOR,  MPULSE(0.0));
+  static double total, offset;
+  static int8_t state = -3;
+  static uint16_t count = 0;
+  static long start_time = 0;
+  
+  int16_t ax, ay, az, gx, gy, gz;
+  char data[20];
+  double angle, avg;
+  long this_time;
+  
+  if(reseting)
+    return;
+  
+  this_time = millis();
+  
+  mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+  angle = atan2(ay, az) * 180/M_PI - offset;
+
+  
+  if(digitalRead(8) == HIGH || state < 0) {
+     analogWrite(RIGHT_MOTOR, MPULSE(0.0));
+     analogWrite(LEFT_MOTOR,  MPULSE(0.0));
+  }
+  else {
+     analogWrite(RIGHT_MOTOR, MPULSE(+0.3));
+     analogWrite(LEFT_MOTOR,  MPULSE(-0.3));
+  }
+  
+  if(state == 4){
+    avg = total / count;
+    
+    sprintf(data, "AVG : %d.%d", (int) avg, abs((int) ((avg - (int) avg) * 100)));
+    Serial.println(data);
+    screen.clearScreen();
+    screen.sendString(0,0, data );
+  }
+  else{
+    if (state == -3) {
+      total = 0;
+      count = 0;
+      offset = 0;
+      start_time = this_time;
+      state++;
     }
-    else{
-       analogWrite(RIGHT_MOTOR, MPULSE(+0.6));
-       analogWrite(LEFT_MOTOR,  MPULSE(-0.6));
-    }
-    if(state == 4){
-      double avg = (maximum + abs(minimum))/2;
-      char data[7];
-      sprintf(data, "AVG : %d.%d", (int) avg, abs((int) ((avg - (int) avg) * 100)));
-      Serial.println(data);
-      screen.clearScreen();
-      screen.sendString(0,0, data );
-    }
-    else{
-      float angle = -(ypr[2] * 180/M_PI);
-      if((state == 0 && angle > 10) || (state == 1 && abs(angle) < 10) || (state == 2 && -angle > 10) || (state == 3 && abs(angle) < 10)){
+    
+    if (state == -2 && this_time - start_time > 250)
+      state++;
+    
+    if (state == -1) {
+      total += angle;
+      count++;
+      //offset += angle * 0.9;
+      
+      if (this_time - start_time < 250) {
         state++;
+        offset = total / count;
+        total = 0;
+        count = 0;
+        start_time = 0;
       }
-      if(angle > maximum){
-        maximum = angle;
-      }
-      else if(angle < minimum){
-        minimum = angle;
-      }
-      char data[7];
-      sprintf(data, "%d.%d\x7f", (int) angle, abs((int) ((angle - (int) angle) * 100)));
-      Serial.println(data);
+    }
+    
+    if((state == 0 && abs(angle) > 10) || (state == 1 && abs(angle) < 10) || (state == 2 && abs(angle) > 10) || (state == 3 && abs(angle) < 10)){
+      state++;
+    }
+    
+    if (state == 1 || state == 3) {
+      total += abs(angle);
+      count++;
+      angle = total / count;
+    }
+    
+    if (this_time - start_time > 500) {
+      start_time = this_time;
+      sprintf(data, "%d.%d\x7f %d", (int) angle, abs((int) ((angle - (int) angle) * 100)), state);
+      //Serial.println(data);
       screen.clearScreen();
       screen.sendString(0,0, data );
     }
-  //}
+    
+    
+    Serial.print("Mode: ");
+    Serial.print(state);
+    Serial.print("\tOffset: ");
+    Serial.print(offset);
+    Serial.print("\tAngle: ");
+    Serial.print(angle);
+  }
+//}
 }
 
 
